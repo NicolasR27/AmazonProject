@@ -14,7 +14,8 @@
 @property (strong, nonatomic) UIScrollView *linkScrollView;
 @property (strong, nonatomic) WKWebView *webView;
 @property (strong, nonatomic) UITabBar *tabBar;
-@property (assign, nonatomic) CGFloat lastContentOffsetY;  // Track last scroll position
+@property (strong, nonatomic) NSDictionary *linkURLs;
+@property (assign, nonatomic) CGFloat lastContentOffsetY;
 
 @end
 
@@ -23,27 +24,33 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
 
-    // Setup the search bar view (Top Bar)
+    [self setupLinkURLs];
     [self setupSearchBarView];
-
-    // Setup the link bar (Horizontal Scrollable Links)
     [self setupLinkBar];
-
-    // Setup the web view
     [self setupWebView];
-
-    // Setup the tab bar
     [self setupTabBar];
+}
+
+#pragma mark - Setup Link URLs
+
+- (void)setupLinkURLs {
+    self.linkURLs = @{
+        @"46530": @"https://www.amazon.com/gp/help/customer/display.html?nodeId=202063460",
+        @"Whole Foods": @"https://www.amazon.com/gp/help/customer/display.html?nodeId=202111220",
+        @"Medical Care": @"https://www.amazon.com/gp/help/customer/display.html?nodeId=202166830",
+        @"Pharmacy": @"https://www.amazon.com/gp/help/customer/display.html?nodeId=202033900",
+        @"Grocery": @"https://www.amazon.com/gp/help/customer/display.html?nodeId=202112510",
+        @"Electronics": @"https://www.amazon.com/gp/help/customer/display.html?nodeId=202112420",
+        @"Books": @"https://www.amazon.com/gp/help/customer/display.html?nodeId=202056920"
+    };
 }
 
 #pragma mark - Setup UI
 
-// Set up search bar view
 - (void)setupSearchBarView {
     self.searchBarView = [[UIView alloc] initWithFrame:CGRectMake(0, 44, self.view.frame.size.width, 60)];
     self.searchBarView.backgroundColor = [UIColor clearColor];
 
-    // Search bar setup
     UISearchBar *searchBar = [[UISearchBar alloc] initWithFrame:CGRectMake(10, 10, self.view.frame.size.width - 20, 40)];
     searchBar.placeholder = @"Search or ask a question";
     searchBar.layer.cornerRadius = 20;
@@ -53,7 +60,6 @@
     [self.view addSubview:self.searchBarView];
 }
 
-// Set up horizontal link bar
 - (void)setupLinkBar {
     self.linkScrollView = [[UIScrollView alloc] initWithFrame:CGRectMake(0, CGRectGetMaxY(self.searchBarView.frame), self.view.frame.size.width, 44)];
     self.linkScrollView.showsHorizontalScrollIndicator = YES;
@@ -61,9 +67,8 @@
     self.linkScrollView.scrollEnabled = YES;
     self.linkScrollView.bounces = YES;
 
-    // Add buttons inside the scroll view
     NSArray *linkTitles = @[@"46530", @"Whole Foods", @"Medical Care", @"Pharmacy", @"Grocery", @"Electronics", @"Books"];
-    CGFloat buttonX = 10;  // Starting x position for the buttons
+    CGFloat buttonX = 10;
 
     for (NSString *title in linkTitles) {
         UIButton *linkButton = [UIButton buttonWithType:UIButtonTypeSystem];
@@ -72,63 +77,82 @@
 
         CGRect buttonFrame = linkButton.frame;
         buttonFrame.origin.x = buttonX;
-        buttonFrame.origin.y = 2;  // Vertically center the buttons within the scroll view
+        buttonFrame.origin.y = 2;
         linkButton.frame = buttonFrame;
 
+        [linkButton addTarget:self action:@selector(linkButtonTapped:) forControlEvents:UIControlEventTouchUpInside];
+
         [self.linkScrollView addSubview:linkButton];
-        buttonX += buttonFrame.size.width + 15;  // Add some space between buttons
+        buttonX += buttonFrame.size.width + 15;
     }
 
     self.linkScrollView.contentSize = CGSizeMake(buttonX, self.linkScrollView.frame.size.height);
     [self.view addSubview:self.linkScrollView];
 }
 
-// Set up web view
 - (void)setupWebView {
-    self.webView = [[WKWebView alloc] initWithFrame:CGRectMake(0, CGRectGetMaxY(self.linkScrollView.frame), self.view.frame.size.width, self.view.frame.size.height - CGRectGetMaxY(self.linkScrollView.frame) - 49)];
+    self.webView = [[WKWebView alloc] initWithFrame:CGRectMake(0, CGRectGetMaxY(self.linkScrollView.frame), self.view.frame.size.width, self.view.frame.size.height - CGRectGetMaxY(self.linkScrollView.frame) - 70)];
     self.webView.navigationDelegate = self;
-    self.webView.scrollView.delegate = self;  // Set the scroll view delegate to self
+    self.webView.scrollView.delegate = self;
     [self.view addSubview:self.webView];
 
-    // Load a test page
     NSURL *url = [NSURL URLWithString:@"https://www.amazon.com"];
     NSURLRequest *request = [NSURLRequest requestWithURL:url];
     [self.webView loadRequest:request];
 }
 
-// Set up tab bar
 - (void)setupTabBar {
-    self.tabBar = [[UITabBar alloc] initWithFrame:CGRectMake(0, self.view.frame.size.height - 49, self.view.frame.size.width, 49)];
+    CGFloat tabBarHeight = 70;
+    self.tabBar = [[UITabBar alloc] initWithFrame:CGRectMake(0, self.view.frame.size.height - tabBarHeight, self.view.frame.size.width, tabBarHeight)];
     self.tabBar.delegate = self;
+
+    UITabBarAppearance *appearance = [[UITabBarAppearance alloc] init];
+    appearance.stackedLayoutAppearance.normal.titlePositionAdjustment = UIOffsetMake(0, -5);
+    appearance.stackedLayoutAppearance.selected.titlePositionAdjustment = UIOffsetMake(0, -5);
+
+    self.tabBar.standardAppearance = appearance;
+    if (@available(iOS 15.0, *)) {
+        self.tabBar.scrollEdgeAppearance = appearance;
+    }
 
     UITabBarItem *homeTab = [[UITabBarItem alloc] initWithTitle:@"Home" image:[UIImage systemImageNamed:@"house"] tag:0];
     UITabBarItem *cartTab = [[UITabBarItem alloc] initWithTitle:@"Cart" image:[UIImage systemImageNamed:@"cart"] tag:1];
-
     self.tabBar.items = @[homeTab, cartTab];
+
     [self.view addSubview:self.tabBar];
 }
 
-#pragma mark - Scroll View Delegate Methods
+#pragma mark - Link Button Tapped
+
+- (void)linkButtonTapped:(UIButton *)sender {
+    NSString *buttonTitle = sender.titleLabel.text;
+    NSString *urlString = self.linkURLs[buttonTitle];  // Get the URL directly from the dictionary
+
+    if (urlString) {
+        [self loadWebPageWithURL:urlString];  // Load the URL in the web view
+    }
+}
+
+#pragma mark - Scroll Behavior for Hiding/Showing Link Bar and Tab Bar
 
 - (void)scrollViewDidScroll:(UIScrollView *)scrollView {
     CGFloat offsetY = scrollView.contentOffset.y;
 
-    // Scroll down (show bars)
-    if (offsetY < self.lastContentOffsetY && self.linkScrollView.frame.origin.y < CGRectGetMaxY(self.searchBarView.frame)) {
+    // Scroll up: hide link bar and tab bar completely off the screen
+    if (offsetY > self.lastContentOffsetY) {
         [UIView animateWithDuration:0.3 animations:^{
-            self.linkScrollView.frame = CGRectMake(0, CGRectGetMaxY(self.searchBarView.frame), self.view.frame.size.width, 44);
-            self.tabBar.frame = CGRectMake(0, self.view.frame.size.height - 49, self.view.frame.size.width, 49);
+            self.linkScrollView.frame = CGRectMake(0, -self.linkScrollView.frame.size.height, self.view.frame.size.width, self.linkScrollView.frame.size.height);
+            self.tabBar.frame = CGRectMake(0, self.view.frame.size.height + self.tabBar.frame.size.height, self.view.frame.size.width, self.tabBar.frame.size.height);  // Move tab bar fully off the screen
         }];
     }
-    // Scroll up (hide bars)
-    else if (offsetY > self.lastContentOffsetY && self.linkScrollView.frame.origin.y >= CGRectGetMaxY(self.searchBarView.frame)) {
+    // Scroll down: bring link bar and tab bar back into view
+    else if (offsetY < self.lastContentOffsetY) {
         [UIView animateWithDuration:0.3 animations:^{
-            self.linkScrollView.frame = CGRectMake(0, -self.linkScrollView.frame.size.height, self.view.frame.size.width, 44);
-            self.tabBar.frame = CGRectMake(0, self.view.frame.size.height, self.view.frame.size.width, 49);
+            self.linkScrollView.frame = CGRectMake(0, CGRectGetMaxY(self.searchBarView.frame), self.view.frame.size.width, self.linkScrollView.frame.size.height);
+            self.tabBar.frame = CGRectMake(0, self.view.frame.size.height - self.tabBar.frame.size.height, self.view.frame.size.width, self.tabBar.frame.size.height);  // Bring tab bar back into view
         }];
     }
 
-    // Update the last content offset for the next comparison
     self.lastContentOffsetY = offsetY;
 }
 
@@ -136,9 +160,9 @@
 
 - (void)tabBar:(UITabBar *)tabBar didSelectItem:(UITabBarItem *)item {
     if (item.tag == 0) {
-        [self loadWebPageWithURL:@"https://www.amazon.com"];  // Home tab loads Amazon home page
+        [self loadWebPageWithURL:@"https://www.amazon.com"];
     } else if (item.tag == 1) {
-        [self loadWebPageWithURL:@"https://www.amazon.com/cart"];  // Cart tab loads Amazon cart page
+        [self loadWebPageWithURL:@"https://www.amazon.com/cart"];
     }
 }
 

@@ -1,4 +1,4 @@
-# Amazon Help App
+# Amazon Project App
 
 This is a simple iOS application that features a web view, a customizable tab bar, and a horizontal scrolling link bar. The app loads Amazon help pages and provides navigation between them using a tab bar and link buttons.
 

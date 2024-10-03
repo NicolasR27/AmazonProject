@@ -6,15 +6,14 @@
 //
 
 #import "ViewController.h"
-#import <WebKit/WebKit.h>
 
-@interface ViewController () <UIScrollViewDelegate, WKNavigationDelegate, UITabBarDelegate>
+@interface ViewController ()
 
 @property (strong, nonatomic) UIView *searchBarView;
 @property (strong, nonatomic) UIScrollView *linkScrollView;
 @property (strong, nonatomic) WKWebView *webView;
 @property (strong, nonatomic) UITabBar *tabBar;
-@property (strong, nonatomic) NSDictionary *linkURLs;
+@property (strong, nonatomic) LinkModel *linkModel;  // The model for managing link URLs
 @property (assign, nonatomic) CGFloat lastContentOffsetY;
 
 @end
@@ -24,25 +23,14 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
 
-    [self setupLinkURLs];
+    // Initialize the LinkModel
+    self.linkModel = [[LinkModel alloc] init];
+
+    // Setup UI components
     [self setupSearchBarView];
     [self setupLinkBar];
     [self setupWebView];
     [self setupTabBar];
-}
-
-#pragma mark - Setup Link URLs
-
-- (void)setupLinkURLs {
-    self.linkURLs = @{
-        @"46530": @"https://www.amazon.com/gp/help/customer/display.html?nodeId=202063460",
-        @"Whole Foods": @"https://www.amazon.com/gp/help/customer/display.html?nodeId=202111220",
-        @"Medical Care": @"https://www.amazon.com/gp/help/customer/display.html?nodeId=202166830",
-        @"Pharmacy": @"https://www.amazon.com/gp/help/customer/display.html?nodeId=202033900",
-        @"Grocery": @"https://www.amazon.com/gp/help/customer/display.html?nodeId=202112510",
-        @"Electronics": @"https://www.amazon.com/gp/help/customer/display.html?nodeId=202112420",
-        @"Books": @"https://www.amazon.com/gp/help/customer/display.html?nodeId=202056920"
-    };
 }
 
 #pragma mark - Setup UI
@@ -126,7 +114,7 @@
 
 - (void)linkButtonTapped:(UIButton *)sender {
     NSString *buttonTitle = sender.titleLabel.text;
-    NSString *urlString = self.linkURLs[buttonTitle];  // Get the URL directly from the dictionary
+    NSString *urlString = [self.linkModel getURLForTitle:buttonTitle];  // Get the URL from the model
 
     if (urlString) {
         [self loadWebPageWithURL:urlString];  // Load the URL in the web view
